@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>批量钱包检查</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 20px auto; padding: 20px }
+        textarea { width: 100%; height: 200px; margin: 10px 0; padding: 10px }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse }
+        td, th { border: 1px solid #ddd; padding: 8px; text-align: left }
+        .loading { display: none; color: #666; margin: 10px 0 }
+        .success { color: green !important }
+        .fail { color: red !important }
+    </style>
+</head>
+<body>
+    <h2>批量钱包检查</h2>
+    <textarea id="wallets" placeholder="每行输入一个钱包地址（0x开头）"></textarea>
+    <button onclick="checkWallets()">开始检查</button>
+    <div id="loading" class="loading">检查中...</div>
+    <table id="results">
+        <tr><th>钱包地址</th><th>检查结果</th></tr>
+    </table>
+
+    <script>
+        async function checkWallet(wallet) {
+            try {
+                const response = await fetch('https://foggynft.xyz/api/check-wallet.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wallet })
+                });
+                const data = await response.json();
+                return { success: true, data }; // 添加成功标识
+            } catch (error) {
+                return { success: false, error: "请求失败" };
+            }
+        }
+
+        async function checkWallets() {
+            const wallets = document.getElementById('wallets').value
+                .split('\n')
+                .map(w => w.trim())
+                .filter(w => w.startsWith('0x'));
+
+            if (wallets.length === 0) return alert('请输入有效钱包地址');
+
+            const resultsTable = document.getElementById('results');
+            resultsTable.innerHTML = '<tr><th>钱包地址</th><th>检查结果</th></tr>';
+            document.getElementById('loading').style.display = 'block';
+
+            for (const wallet of wallets) {
+                const { success, data, error } = await checkWallet(wallet);
+                const row = resultsTable.insertRow(-1);
+                
+                row.insertCell(0).textContent = wallet;
+                const resultCell = row.insertCell(1);
+
+                if (!success) {
+                    resultCell.textContent = '❌ 请求失败';
+                    resultCell.className = 'fail';
+                } else if (data.found) {
+                    resultCell.textContent = '✅ 有白名单';
+                    resultCell.className = 'success';
+                } else {
+                    resultCell.textContent = '❌ 没白名单';
+                    resultCell.className = 'fail';
+                }
+            }
+
+            document.getElementById('loading').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
